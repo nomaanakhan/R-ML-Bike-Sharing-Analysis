@@ -1,0 +1,169 @@
+---
+Nomaan Khan (nak150230)
+CS 4375-501
+Project 1
+---
+
+## Data Set 1 (ds1) Despcription:
+    
+    My first data set is a collection of data gathered about a bike sharing program in Portugal. It has data abou the number of
+    casual and registered users each day for two years, it also has data about the weather, temperature, humidity, windspeed,
+    and whether that day was a holiday. There are 16 columns and all are described below.
+    
+    My target variable is cnt which is total number of bikes used which includes both registered and casual users.
+    I want to predict the number of users depending on various attributes, this prediction can be useful for the company
+    to calculate the number of bikes they need on any particular day.
+    
+    I have performed linear regression and kNN classification on the data set.
+    
+    Number of Instances: 731
+    Number of Attributes: 16 (including target)
+    
+    Attribute Description:
+    
+      1. - instant: record index
+    	2. - dteday : date
+    	3. - season : season (1:spring, 2:summer, 3:fall, 4:winter)
+    	4. - yr : year (0: 2011, 1:2012)
+    	5. - mnth : month ( 1 to 12)
+    	6. - holiday : weather day is holiday or not (extracted from http://dchr.dc.gov/page/holiday-schedule)
+    	7. - weekday : day of the week
+    	8. - workingday : if day is neither weekend nor holiday is 1, otherwise is 0.
+    	9. + weathersit : 
+    		 - 1: Clear, Few clouds, Partly cloudy, Partly cloudy
+    		 - 2: Mist + Cloudy, Mist + Broken clouds, Mist + Few clouds, Mist
+    		 - 3: Light Snow, Light Rain + Thunderstorm + Scattered clouds, Light Rain + Scattered clouds
+    		 - 4: Heavy Rain + Ice Pallets + Thunderstorm + Mist, Snow + Fog
+    	10. - temp : Normalized temperature in Celsius. The values are divided to 41 (max)
+    	11. - atemp: Normalized feeling temperature in Celsius. The values are divided to 50 (max)
+    	12. - hum: Normalized humidity. The values are divided to 100 (max)
+    	13. - windspeed: Normalized wind speed. The values are divided to 67 (max)
+    	14. - casual: count of casual users
+    	15. - registered: count of registered users
+    	16. - cnt: count of total rental bikes including both casual and registered
+    	
+    	The data set is obtained from "https://archive.ics.uci.edu/ml/machine-learning-databases/00275/"
+    	You have to download the zip file and use the day.csv file.
+      For full citation see the citation section at the end.
+
+```{r}
+ds1 <- read.table("C:/Users/ADMIN/Desktop/Academia 2.0/Junior/Spring 2018/Machine Learning/HW/Project 1/day.csv", header=TRUE, sep=",")
+```
+
+
+Using R functions on the data set.
+
+```{r}
+names(ds1)
+head(ds1)
+str(ds1)
+dim(ds1)
+summary(ds1)
+```
+
+```{r}
+par(mfrow=c(1,2))
+plot(as.factor(ds1$weathersit),ds1$cnt, ylab = "Total Users", xlab = "Weather Situation")
+plot(ds1$atemp,ds1$cnt, ylab = "Total Users", xlab = "Normalized Temperature")
+```
+From the first plot we can see that more users on a clear day.
+From the second plot we see that as the normalized temperature rises the count of users tends to rise. 
+
+Converting to factors, because all these variable have integer values which represent characters.
+
+```{r}
+ds1$season <- as.factor(ds1$season)
+ds1$mnth <- as.factor(ds1$mnth)
+ds1$weekday <- as.factor(ds1$weekday)
+ds1$workingday <- as.factor(ds1$workingday)
+ds1$weathersit <- as.factor(ds1$weathersit)
+```
+
+Splitting the data randomly into 75% train and 25% test.
+
+```{r}
+set.seed(1234)
+i <- sample(1:nrow(ds1), nrow(ds1)*0.75, replace=FALSE)
+train <- ds1[i,]
+test <- ds1[-i,]
+```
+
+
+Building a linear model, where the target is total number of casual users and the predictors are humidity, average
+temperature, weather situation, season and wind speed.
+
+```{r}
+lm1 <- lm(cnt~atemp*hum*temp+atemp+temp+hum+mnth+weathersit+season, data=train)
+pred <- predict(lm1, newdata=test)
+cor(pred, test$cnt)
+```
+
+```{r}
+summary(lm1)
+```
+
+
+Calculating MSE and RSE.
+
+```{r}
+mse <- mean(lm1$residuals^2)
+mse
+rse <- sqrt(mse)
+rse
+```
+
+Concverting the following attributes to numeric so that they can be used for kNN regression.
+
+```{r}
+ds1$weathersit <- as.integer(ds1$weathersit)
+ds1$mnth <- as.integer(ds1$mnth)
+ds1$season <- as.integer(ds1$season)
+```
+
+Perfoming kNN regression on scaled data. The predictors are the same as the ones in the linear model.
+
+```{r}
+library('caret')
+df <- data.frame(scale(ds1[,c(3,9,10,11,12,13,16)])) # scaling total number of casual users, humidity, average temperature,                                                         # weather situation, season, mnth and wind speed.
+train2 <- df[i,]
+test2 <- df[-i,]
+
+fit <- knnreg(train2[,1:6],train2[,7],k=12)
+predictions <- predict(fit, test2[,1:6])
+cor(predictions, test2$cnt)                          # calculating accuracy
+```
+
+```{r}
+summary(fit)
+
+r_squared <- 1 - sum((test2$cnt-predictions)^2)/sum((test2$cnt-mean(test2$cnt))^2)
+r_squared
+```
+
+Summary doesn't tell us much, but R squared will.
+
+## Analysing Models/Algorithm Results:
+    
+    Both linear model and kNN regression have good accuracy and good R squared.
+    
+    The linear model has an accuracy of 0.7462853 and R squared of 0.613. This is high accuracy and the model is able to
+    explain 61.3% of the variabiity. It also has a low p value which tells us that the predictors are predicting well.
+    
+    kNN regression gives an accuracy of 0.7902023 and R squared of 0.621735. This is high accuracy and the model is able to
+    explain 62.1735% of the variabiity.
+    
+    kNN regression just edges the linear model in both accuracy and explaining variability, and is the best for this data set.
+    
+    
+
+
+## Citations:
+    
+    [1] Contains link for data sets.
+  
+    1. Data Set 1 (Bike Sharing in Portugal)
+    
+        [1] Lichman, M. (2013). UCI Machine Learning Repository                                                                            [https://archive.ics.uci.edu/ml/machine-learning-databases/00275/]. Irvine, CA: University of California, School of             Information and Computer Science.
+    
+        [2] Fanaee-T, Hadi, and Gama, Joao, "Event labeling combining ensemble detectors and background knowledge", Progress in             Artificial Intelligence (2013): pp. 1-15, Springer Berlin Heidelberg, doi:10.1007/s13748-013-0040-3.
+        
